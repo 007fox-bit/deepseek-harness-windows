@@ -29,7 +29,7 @@ index 81fb9bb..acbdf24 100644
  - 跨越隐藏/显示边界滑动的行不能只靠布局变化：只有当计算出的 app-region 值变化时，Electron 才会重新收集窗口的拖拽矩形（electron#32341），而 Blink 收集时会跳过隐藏的盒子。watcher 一次性把这个缺口对所有行补上——它在"触及被打标行的 DOM 变化"或"被打标行的盒子尺寸变化"时重新启动，随后在盒子仍在移动的每一帧发脉冲——因此右栏不再自带任何脉冲。
 diff --git a/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.i18n.yaml b/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.i18n.yaml
 new file mode 100644
-index 0000000..a40be7e
+index 0000000..57971b1
 --- /dev/null
 +++ b/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.i18n.yaml
 @@ -0,0 +1,19 @@
@@ -44,8 +44,8 @@ index 0000000..a40be7e
 +  en: dd29b493ca43434a
 +  zh: 11410813e6fd3fb5
 +/agent-note-linux-desktop-community-packaging/decision:
-+  en: 96deabeeb93c23e4
-+  zh: cb74a5827787b87d
++  en: 5b2b9a2ea698dff7
++  zh: d22bdda6e14f96af
 +/agent-note-linux-desktop-community-packaging/alternatives-considered:
 +  en: 875d4246af5a5f50
 +  zh: 3e2ec2213f75e58a
@@ -54,7 +54,7 @@ index 0000000..a40be7e
 +  zh: fb3919899fb167d9
 diff --git a/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.md b/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.md
 new file mode 100644
-index 0000000..b44c794
+index 0000000..ef2e711
 --- /dev/null
 +++ b/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.md
 @@ -0,0 +1,31 @@
@@ -70,7 +70,7 @@ index 0000000..b44c794
 +
 +## Decision
 +
-+Desktop accepts `linux-x64` as a packaging and development-build target on Linux x64 hosts. The target prepares the locked Linux runtime, uses Electron's Linux executable layout, installs the POSIX `dsh` launcher and verifies the assembled `linux-unpacked` application. electron-builder emits AppImage and DEB artifacts with the `deepseek-harness` executable name. The Linux glibc LibreOfficeKit engine remains wholly outside ASAR so its manifest, executable and program tree resolve through one filesystem path during document conversion.
++Desktop accepts `linux-x64` as a packaging and development-build target on Linux x64 hosts. The target prepares the locked Linux runtime, uses Electron's Linux executable layout, installs the POSIX `dsh` launcher and verifies the assembled `linux-unpacked` application. electron-builder emits AppImage and DEB artifacts with the `deepseek-harness` executable name. Linux Office conversion unpacks only the dependency closure found in the prepared runtime; it does not declare a native engine path that is absent from the installed package set.
 +
 +Linux packaging is unsigned only. It uses the configuration-free local application ID, strips release settings, carries no mandatory-update policy or automatic-update feed, writes no release completion record and remains outside the official Desktop upload and retention target types. Artifact filenames retain the unsigned marker. The platform package formats are community distribution outputs; each distributor owns distribution-specific launch, sandbox, desktop-integration, native-dependency and upgrade qualification.
 +
@@ -91,7 +91,7 @@ index 0000000..b44c794
 +Linux x64 CI can build two installable formats without signing credentials or release dotenv files. The artifacts are larger than a directory build and are not automatically updated. Linux support claims must name tested distributions and remain community-qualified until official signing, update, retention and installed-upgrade behavior are designed and verified.
 diff --git a/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.zh.md b/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.zh.md
 new file mode 100644
-index 0000000..8f1d9f7
+index 0000000..e288247
 --- /dev/null
 +++ b/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.zh.md
 @@ -0,0 +1,31 @@
@@ -107,7 +107,7 @@ index 0000000..8f1d9f7
 +
 +## Decision
 +
-+Desktop 接受 `linux-x64` 作为 Linux x64 主机上的打包与开发构建目标。该目标准备锁定的 Linux Runtime，使用 Electron 的 Linux 可执行文件布局，安装 POSIX `dsh` 启动器，并验证组装后的 `linux-unpacked` 应用。electron-builder 生成 AppImage 与 DEB 产物，可执行文件名为 `deepseek-harness`。Linux glibc LibreOfficeKit 引擎完整保留在 ASAR 之外，使文档转换期间的清单、可执行文件与程序目录通过同一文件系统路径解析。
++Desktop 接受 `linux-x64` 作为 Linux x64 主机上的打包与开发构建目标。该目标准备锁定的 Linux Runtime，使用 Electron 的 Linux 可执行文件布局，安装 POSIX `dsh` 启动器，并验证组装后的 `linux-unpacked` 应用。electron-builder 生成 AppImage 与 DEB 产物，可执行文件名为 `deepseek-harness`。Linux Office 转换只解包已准备 Runtime 中实际存在的依赖闭包，不声明已安装包集合中不存在的原生引擎路径。
 +
 +Linux 只允许未签名打包。它使用无需配置的本地应用 ID，移除发布设置，不携带强制更新策略或自动更新源，不写发布完成记录，并且不进入官方 Desktop 上传和保留目标类型。产物文件名保留未签名标记。平台安装包属于社区分发产物；各分发者负责发行版特定的启动、沙箱、桌面集成、原生依赖与升级验收。
 +
@@ -460,7 +460,7 @@ index d544ce6..9a6b2a5 100644
 +  readonly target: DesktopBuildTarget
  }
 diff --git a/apps/desktop/scripts/electron-builder-config.mjs b/apps/desktop/scripts/electron-builder-config.mjs
-index 4b9cd27..28c7606 100644
+index 4b9cd27..70d8303 100644
 --- a/apps/desktop/scripts/electron-builder-config.mjs
 +++ b/apps/desktop/scripts/electron-builder-config.mjs
 @@ -67,3 +67,3 @@ export function createElectronBuilderConfig(
@@ -468,15 +468,14 @@ index 4b9cd27..28c7606 100644
 -  const policy = packagesMacOS && unsigned ? undefined : resolveDesktopPolicyEnvironment(env)
 +  const policy = unsigned && !packagesWindows ? undefined : resolveDesktopPolicyEnvironment(env)
    if (resolvedPlatform === 'win32') installWindowsDirectoryInstaller()
-@@ -77,3 +77,6 @@ export function createElectronBuilderConfig(
+@@ -77,3 +77,5 @@ export function createElectronBuilderConfig(
    const unpack = ['**/*.{node,dylib,dll,so,exe}', '**/*.so.*', '**/spawn-helper', '**/@vscode/ripgrep-*/bin/rg',
 -    `**/node_modules/@deepseek-ai/libreoffice-kit-${resolvedPlatform}-${resolvedArch}/**/*`]
-+    `**/node_modules/@deepseek-ai/libreoffice-kit-${resolvedPlatform}-${resolvedArch}/**/*`,
 +    ...resolvedPlatform === 'linux'
-+      ? [`**/node_modules/@deepseek-ai/libreoffice-kit-linux-${resolvedArch}-glibc/**/*`]
-+      : []]
++      ? []
++      : [`**/node_modules/@deepseek-ai/libreoffice-kit-${resolvedPlatform}-${resolvedArch}/**/*`]]
    const windowsSigner = packagesWindows && !unsigned
-@@ -248,4 +251,7 @@ export function createElectronBuilderConfig(
+@@ -248,4 +250,7 @@ export function createElectronBuilderConfig(
      linux: {
 +      icon: fileURLToPath(new URL('../resources/icon-windows.png', import.meta.url)),
        category: 'Development',
@@ -759,7 +758,7 @@ index def8cb1..0c217cd 100644
 +  target: DesktopReleaseTargetName,
    version = '1.2.3',
 diff --git a/apps/desktop/tests/installer-packaging.spec.ts b/apps/desktop/tests/installer-packaging.spec.ts
-index 15a4610..fc029ca 100644
+index 15a4610..0e82735 100644
 --- a/apps/desktop/tests/installer-packaging.spec.ts
 +++ b/apps/desktop/tests/installer-packaging.spec.ts
 @@ -79,2 +79,21 @@ describe('installer preparation preserves application dependencies', () => {
@@ -778,9 +777,9 @@ index 15a4610..fc029ca 100644
 +    })
 +    expect(config.publish).toBeNull()
 +    expect(config.artifactName).toContain('-unsigned.')
-+    expect(config.asarUnpack).toContain(
-+      '**/node_modules/@deepseek-ai/libreoffice-kit-linux-x64-glibc/**/*',
-+    )
++    expect(config.asarUnpack).not.toEqual(expect.arrayContaining([
++      expect.stringContaining('libreoffice-kit-linux-x64'),
++    ]))
 +  })
 +
    it('packages every preload entry point the shell loads', async () => {
