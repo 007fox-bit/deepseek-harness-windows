@@ -1,30 +1,28 @@
-# DeepSeek Harness Windows 社区构建
+# DeepSeek Harness 社区桌面构建
 
-这是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的 Windows x64 社区安装包，面向希望直接安装桌面版、无需配置 Node.js 或 pnpm 的用户。
+这是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的非官方桌面安装包仓库，面向希望直接安装、无需配置 Node.js 或 pnpm 的用户。目前提供 Windows x64 历史预览版，并自动构建 Linux x64 AppImage 与 DEB。
 
-> 本仓库不是 DeepSeek 官方发布渠道。安装包基于上游 `0.1.6-alpha.1` 和提交 [`0d1f50007f9bca3f52b06e1c3074fa14d5fb0720`](https://github.com/deepseek-ai/deepseek-harness/commit/0d1f50007f9bca3f52b06e1c3074fa14d5fb0720) 构建。
+> 本仓库不是 DeepSeek 官方发布渠道。Linux 包无代码签名、不接入官方自动更新，使用前请核对版本、来源提交与 SHA-256。
 
 ## 下载与安装
 
 1. 打开本仓库的 [Releases](https://github.com/007fox-bit/deepseek-harness-windows/releases) 页面。
-2. 下载 `DeepSeek-Harness-0.1.6-alpha.1-Windows-x64-Setup.exe`。
+2. Windows 下载 `.exe`；Linux 下载 `.AppImage` 或 `.deb`。
 3. 核对文件的 SHA-256 校验值。
-4. 双击安装包并按向导完成安装。
+4. 按对应平台的方法安装或运行。
 5. 首次启动后，在模型设置中填写你自己的 API 配置。
 
-```text
-C9A64D678584C09ADB3E21B34FC7814A001039DE0C38FBE81A9CE38BB95B49B1  DeepSeek-Harness-0.1.6-alpha.1-Windows-x64-Setup.exe
-```
+Linux AppImage：`chmod +x DeepSeek-Harness-*-Linux-x86_64.AppImage` 后直接运行。Debian/Ubuntu：`sudo apt install ./DeepSeek-Harness-*-Linux-amd64.deb`。
 
-Windows SmartScreen 可能显示“未知发布者”，因为这个社区构建尚未进行代码签名。请先核对文件名和 SHA-256，再决定是否运行。
+Windows SmartScreen 可能显示“未知发布者”；Linux 包也没有发布签名。请先核对 Release 附带的校验文件，再决定是否运行。
 
 ## 构建说明
 
-- 目标平台：Windows x64。
+- 目标平台：Windows x64 与 Linux x64。
 - 安装包已包含 Electron、Node.js 和 DeepSeek Harness 运行时。
-- 当前版本是 alpha 开发者预览版。
+- Linux 工作流默认基于官方 `dsh-v0.2.1-rc.3` 标签，可在手动运行时选择其他兼容标签。
 - 此构建未启用自动更新。
-- 安装包大小约为 163.22 MiB。
+- Linux 补丁位于 [`patches/linux-desktop-rc3.patch`](patches/linux-desktop-rc3.patch)，构建过程位于 [GitHub Actions](.github/workflows/linux-release.yml)。
 
 ## 许可证与归属
 
