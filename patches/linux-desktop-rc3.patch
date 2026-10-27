@@ -169,10 +169,18 @@ index 0682e6e..0e919a4 100644
      readonly include: string
      readonly oneClick: false
 diff --git a/apps/desktop/package.json b/apps/desktop/package.json
-index 1d44f92..b271ba9 100644
+index 1d44f92..e1b13de 100644
 --- a/apps/desktop/package.json
 +++ b/apps/desktop/package.json
-@@ -32,6 +32,8 @@
+@@ -4,6 +4,7 @@
+   "version": "0.2.1-rc.2",
+   "private": true,
+   "license": "MIT",
++  "homepage": "https://github.com/deepseek-ai/deepseek-harness",
+   "type": "module",
+   "main": "lib/main.js",
+   "scripts": {
+@@ -32,6 +33,8 @@
      "package:mac:x64": "tsx scripts/package-target.ts mac-x64",
      "package:mac:x64:unsigned": "tsx scripts/package-target.ts mac-x64 --unsigned",
      "package:mac:x64:dir": "tsx scripts/package-target.ts mac-x64 --dir",
