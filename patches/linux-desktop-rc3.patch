@@ -138,6 +138,21 @@ index 0000000..4ebd074
 +## Consequences
 +
 +Linux x64 CI 无需签名凭据或发布 dotenv 文件即可生成两种可安装格式。产物大于目录构建，并且不会自动更新。在官方签名、更新、保留与已安装升级行为完成设计和验证之前，Linux 支持声明必须注明已测试发行版并保持社区限定。
+diff --git a/apps/desktop/cli/dsh b/apps/desktop/cli/dsh
+index ee657a3..69d331c 100644
+--- a/apps/desktop/cli/dsh
++++ b/apps/desktop/cli/dsh
+@@ -11,4 +11,9 @@ while [ -L "$launcher" ]; do
+   esac
+ done
+ resources=$(CDPATH= cd -- "$(dirname -- "$launcher")/../../.." && pwd -P)
+-ELECTRON_RUN_AS_NODE=1 exec "$resources/../MacOS/DeepSeek Harness" --expose-internals "$resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-desktop-host/lib/cli.js" "$@"
++if [ -x "$resources/../MacOS/DeepSeek Harness" ]; then
++  electron="$resources/../MacOS/DeepSeek Harness"
++else
++  electron="$resources/../deepseek-harness"
++fi
++ELECTRON_RUN_AS_NODE=1 exec "$electron" --expose-internals "$resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-desktop-host/lib/cli.js" "$@"
 diff --git a/apps/desktop/electron-builder.config.d.mts b/apps/desktop/electron-builder.config.d.mts
 index 0682e6e..0e919a4 100644
 --- a/apps/desktop/electron-builder.config.d.mts
