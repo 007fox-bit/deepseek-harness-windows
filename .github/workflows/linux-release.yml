@@ -75,57 +75,15 @@ jobs:
           apps/desktop/tests/package-target.spec.ts
           apps/desktop/tests/desktop-package-environment.spec.ts
           apps/desktop/tests/runtime-preparation.spec.ts
+          apps/desktop/tests/prepare-runtime-patches.spec.ts
           apps/desktop/tests/cli-launcher.spec.ts
           apps/desktop/tests/installer-packaging.spec.ts
 
       - name: Build AppImage and DEB
         working-directory: upstream
-        shell: bash
         env:
           CI: "true"
-        run: |
-          set +e
-          pnpm run package:desktop:linux:x64:dir
-          status=$?
-          if (( status != 0 )); then
-            resources="$(realpath apps/desktop/.desktop-build/targets/linux-x64/unsigned-artifacts/linux-unpacked/resources)"
-            archive="$resources/app.asar"
-            executable="$(realpath apps/desktop/.desktop-build/targets/linux-x64/unsigned-artifacts/linux-unpacked/deepseek-harness)"
-            echo "::group::LibreOffice ASAR entries"
-            pnpm --filter @deepseek-ai/dsh-desktop exec node --input-type=module -e '
-              import { readAsar } from "app-builder-lib/out/asar/asar.js"
-              const archive = await readAsar(process.argv[1])
-              const entries = []
-              const visit = (node, path) => {
-                if (node.files !== undefined) {
-                  for (const [name, child] of Object.entries(node.files)) visit(child, `${path}/${name}`)
-                } else if (path.includes("libreoffice-kit")) entries.push(`${path}${node.unpacked === true ? " [unpacked]" : ""}`)
-              }
-              visit(archive.getFile("dsh", false), "dsh")
-              console.log(entries.join("\n"))
-            ' "$archive"
-            echo "::endgroup::"
-            echo "::group::LibreOffice unpacked entries"
-            find "$archive.unpacked/dsh/node_modules" -path '*libreoffice-kit*' -maxdepth 8 -print 2>/dev/null || true
-            echo "::endgroup::"
-            echo "::group::Electron module search"
-            ELECTRON_RUN_AS_NODE=1 "$executable" -e '
-              const { createRequire } = require("node:module")
-              const { join } = require("node:path")
-              const { lstatSync } = require("node:fs")
-              const request = "@deepseek-ai/libreoffice-kit-linux-x64-glibc"
-              const localRequire = createRequire(process.argv[1])
-              for (const directory of localRequire.resolve.paths(request) ?? []) {
-                const candidate = join(directory, request)
-                const status = lstatSync(candidate, { throwIfNoEntry: false })
-                console.log(JSON.stringify({ candidate, exists: status !== undefined, directory: status?.isDirectory() }))
-              }
-              try { console.log(JSON.stringify({ resolved: localRequire.resolve(`${request}/package.json`) })) }
-              catch (error) { console.log(JSON.stringify({ resolutionError: error.message })) }
-            ' "$resources/app.asar/dsh/node_modules/@deepseek-ai/libreoffice-kit/lib/index.js"
-            echo "::endgroup::"
-          fi
-          exit "$status"
+        run: pnpm run package:desktop:linux:x64:unsigned
 
       - name: Collect and verify release assets
         working-directory: upstream
