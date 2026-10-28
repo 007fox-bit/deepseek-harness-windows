@@ -29,7 +29,7 @@ index 81fb9bb..acbdf24 100644
  - 跨越隐藏/显示边界滑动的行不能只靠布局变化：只有当计算出的 app-region 值变化时，Electron 才会重新收集窗口的拖拽矩形（electron#32341），而 Blink 收集时会跳过隐藏的盒子。watcher 一次性把这个缺口对所有行补上——它在"触及被打标行的 DOM 变化"或"被打标行的盒子尺寸变化"时重新启动，随后在盒子仍在移动的每一帧发脉冲——因此右栏不再自带任何脉冲。
 diff --git a/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.i18n.yaml b/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.i18n.yaml
 new file mode 100644
-index 0000000..57971b1
+index 0000000..f9256fe
 --- /dev/null
 +++ b/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.i18n.yaml
 @@ -0,0 +1,19 @@
@@ -44,8 +44,8 @@ index 0000000..57971b1
 +  en: dd29b493ca43434a
 +  zh: 11410813e6fd3fb5
 +/agent-note-linux-desktop-community-packaging/decision:
-+  en: 5b2b9a2ea698dff7
-+  zh: d22bdda6e14f96af
++  en: 09c0b2a5866b017c
++  zh: 9ee5bd16f0d46200
 +/agent-note-linux-desktop-community-packaging/alternatives-considered:
 +  en: 875d4246af5a5f50
 +  zh: 3e2ec2213f75e58a
@@ -54,7 +54,7 @@ index 0000000..57971b1
 +  zh: fb3919899fb167d9
 diff --git a/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.md b/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.md
 new file mode 100644
-index 0000000..ef2e711
+index 0000000..76fcf97
 --- /dev/null
 +++ b/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.md
 @@ -0,0 +1,31 @@
@@ -70,7 +70,7 @@ index 0000000..ef2e711
 +
 +## Decision
 +
-+Desktop accepts `linux-x64` as a packaging and development-build target on Linux x64 hosts. The target prepares the locked Linux runtime, uses Electron's Linux executable layout, installs the POSIX `dsh` launcher and verifies the assembled `linux-unpacked` application. electron-builder emits AppImage and DEB artifacts with the `deepseek-harness` executable name. Linux Office conversion unpacks only the dependency closure found in the prepared runtime; it does not declare a native engine path that is absent from the installed package set.
++Desktop accepts `linux-x64` as a packaging and development-build target on Linux x64 hosts. The target prepares the locked Linux runtime, uses Electron's Linux executable layout, installs the POSIX `dsh` launcher and verifies the assembled `linux-unpacked` application. electron-builder emits AppImage and DEB artifacts with the `deepseek-harness` executable name. Linux Office conversion unpacks only the dependency closure found in the prepared runtime. A runtime-only LibreOfficeKit 0.1.5 patch treats Electron's `null` result for a missing ASAR path as absent, preserving the package's WASM fallback.
 +
 +Linux packaging is unsigned only. It uses the configuration-free local application ID, strips release settings, carries no mandatory-update policy or automatic-update feed, writes no release completion record and remains outside the official Desktop upload and retention target types. Artifact filenames retain the unsigned marker. The platform package formats are community distribution outputs; each distributor owns distribution-specific launch, sandbox, desktop-integration, native-dependency and upgrade qualification.
 +
@@ -91,7 +91,7 @@ index 0000000..ef2e711
 +Linux x64 CI can build two installable formats without signing credentials or release dotenv files. The artifacts are larger than a directory build and are not automatically updated. Linux support claims must name tested distributions and remain community-qualified until official signing, update, retention and installed-upgrade behavior are designed and verified.
 diff --git a/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.zh.md b/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.zh.md
 new file mode 100644
-index 0000000..e288247
+index 0000000..fd75f7d
 --- /dev/null
 +++ b/.agents/notes/implemented/feature/2026-10-27-linux-desktop-community-packaging.zh.md
 @@ -0,0 +1,31 @@
@@ -107,7 +107,7 @@ index 0000000..e288247
 +
 +## Decision
 +
-+Desktop 接受 `linux-x64` 作为 Linux x64 主机上的打包与开发构建目标。该目标准备锁定的 Linux Runtime，使用 Electron 的 Linux 可执行文件布局，安装 POSIX `dsh` 启动器，并验证组装后的 `linux-unpacked` 应用。electron-builder 生成 AppImage 与 DEB 产物，可执行文件名为 `deepseek-harness`。Linux Office 转换只解包已准备 Runtime 中实际存在的依赖闭包，不声明已安装包集合中不存在的原生引擎路径。
++Desktop 接受 `linux-x64` 作为 Linux x64 主机上的打包与开发构建目标。该目标准备锁定的 Linux Runtime，使用 Electron 的 Linux 可执行文件布局，安装 POSIX `dsh` 启动器，并验证组装后的 `linux-unpacked` 应用。electron-builder 生成 AppImage 与 DEB 产物，可执行文件名为 `deepseek-harness`。Linux Office 转换只解包已准备 Runtime 中实际存在的依赖闭包。Runtime 专用的 LibreOfficeKit 0.1.5 补丁将 Electron 对缺失 ASAR 路径返回的 `null` 视为不存在，从而保留该包的 WASM 回退。
 +
 +Linux 只允许未签名打包。它使用无需配置的本地应用 ID，移除发布设置，不携带强制更新策略或自动更新源，不写发布完成记录，并且不进入官方 Desktop 上传和保留目标类型。产物文件名保留未签名标记。平台安装包属于社区分发产物；各分发者负责发行版特定的启动、沙箱、桌面集成、原生依赖与升级验收。
 +
@@ -272,6 +272,21 @@ index e97f072..d14dc50 100644
 +AppImage 与 DEB 是社区分发格式，不属于已验收的官方发布。分发者必须在每个受支持发行版上测试启动、桌面集成、沙箱行为、插件安装、终端访问、原生依赖与升级卸载。打包后的可执行文件名为 `deepseek-harness`；DEB 通过 electron-builder 安装桌面入口。
 +
  <a id="windows-actions"></a>
+diff --git a/apps/desktop/patches/libreoffice-kit@0.1.5-electron-asar.patch b/apps/desktop/patches/libreoffice-kit@0.1.5-electron-asar.patch
+new file mode 100644
+index 0000000..5947ea7
+--- /dev/null
++++ b/apps/desktop/patches/libreoffice-kit@0.1.5-electron-asar.patch
+@@ -0,0 +1,9 @@
++diff --git a/lib/index.js b/lib/index.js
++index f2b8e8a..e0c9024 100644
++--- a/lib/index.js
+++++ b/lib/index.js
++@@ -1483,3 +1483,3 @@ const ENGINE_PREFIX = "@deepseek-ai/libreoffice-kit";
++ function installedPackageExists(name) {
++-	return (require.resolve.paths(name) ?? []).some((directory) => lstatSync(join(directory, name), { throwIfNoEntry: false }) !== void 0);
+++	return (require.resolve.paths(name) ?? []).some((directory) => lstatSync(join(directory, name), { throwIfNoEntry: false }) != null);
++ }
 diff --git a/apps/desktop/scripts/desktop-build-paths.d.mts b/apps/desktop/scripts/desktop-build-paths.d.mts
 index c7b8173..6689f50 100644
 --- a/apps/desktop/scripts/desktop-build-paths.d.mts
@@ -614,6 +629,18 @@ index 69bade9..de3f628 100644
    const target = resolveDesktopBuildTarget(env)
 +  if (target === 'linux-x64') throw new Error('desktop retention: Linux community packages do not use the official update release store')
    const windows = target === 'win-x64'
+diff --git a/apps/desktop/scripts/runtime-patch-policy.ts b/apps/desktop/scripts/runtime-patch-policy.ts
+index d2ea174..609adb4 100644
+--- a/apps/desktop/scripts/runtime-patch-policy.ts
++++ b/apps/desktop/scripts/runtime-patch-policy.ts
+@@ -15,2 +15,7 @@ export const DESKTOP_RUNTIME_PATCHES: Readonly<Record<string, DesktopRuntimePatc
+   '@yao-pkg/pkg@6.21.0': { scope: 'workspace-only', reason: 'The executable packer executes on the build host.' },
++  '@deepseek-ai/libreoffice-kit@0.1.5': {
++    scope: 'runtime-only',
++    path: 'apps/desktop/patches/libreoffice-kit@0.1.5-electron-asar.patch',
++    reason: 'Electron returns null for missing ASAR paths; Office engine discovery must treat it as absent.',
++  },
+   'app-builder-lib@26.17.0': { scope: 'workspace-only', reason: 'DMG format validation executes on the build host.' },
 diff --git a/apps/desktop/scripts/smoke-packaged-runtime.ts b/apps/desktop/scripts/smoke-packaged-runtime.ts
 index 6c3c12c..840fbef 100644
 --- a/apps/desktop/scripts/smoke-packaged-runtime.ts
@@ -811,6 +838,19 @@ index ba647d7..1afa411 100644
 +    const linux = resolveDesktopPackageTarget('linux-x64', 'linux', 'x64')
 +    expect(desktopElectronBuilderArguments(linux, false)).toContain('--linux')
    })
+diff --git a/apps/desktop/tests/prepare-runtime-patches.spec.ts b/apps/desktop/tests/prepare-runtime-patches.spec.ts
+index 84c71a1..85dea05 100644
+--- a/apps/desktop/tests/prepare-runtime-patches.spec.ts
++++ b/apps/desktop/tests/prepare-runtime-patches.spec.ts
+@@ -44,3 +44,7 @@ it('classifies the current workspace and shares only runtime patch bytes', () =>
+   const plan = prepareRuntimePatches(project, repository)
+-  expect(plan.patches.map(entry => entry.spec)).toEqual(['@earendil-works/pi-ai@1.1.0', 'node-pty@1.2.0-beta.15'])
++  expect(plan.patches.map(entry => entry.spec)).toEqual([
++    '@earendil-works/pi-ai@1.1.0',
++    '@deepseek-ai/libreoffice-kit@0.1.5',
++    'node-pty@1.2.0-beta.15',
++  ])
+   expect(plan.workspaceOnly).toHaveLength(6)
 diff --git a/apps/desktop/tests/runtime-preparation.spec.ts b/apps/desktop/tests/runtime-preparation.spec.ts
 index d16dd59..b289d54 100644
 --- a/apps/desktop/tests/runtime-preparation.spec.ts
