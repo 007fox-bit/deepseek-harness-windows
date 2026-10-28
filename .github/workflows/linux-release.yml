@@ -88,9 +88,9 @@ jobs:
           pnpm run package:desktop:linux:x64:dir
           status=$?
           if (( status != 0 )); then
-            resources="apps/desktop/.desktop-build/targets/linux-x64/unsigned-artifacts/linux-unpacked/resources"
+            resources="$(realpath apps/desktop/.desktop-build/targets/linux-x64/unsigned-artifacts/linux-unpacked/resources)"
             archive="$resources/app.asar"
-            executable="apps/desktop/.desktop-build/targets/linux-x64/unsigned-artifacts/linux-unpacked/deepseek-harness"
+            executable="$(realpath apps/desktop/.desktop-build/targets/linux-x64/unsigned-artifacts/linux-unpacked/deepseek-harness)"
             echo "::group::LibreOffice ASAR entries"
             pnpm --filter @deepseek-ai/dsh-desktop exec node --input-type=module -e '
               import { readAsar } from "app-builder-lib/out/asar/asar.js"
