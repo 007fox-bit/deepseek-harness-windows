@@ -1,0 +1,316 @@
+diff --git a/.agents/notes/implemented/feature/2026-11-13-community-windows-github-updates.i18n.yaml b/.agents/notes/implemented/feature/2026-11-13-community-windows-github-updates.i18n.yaml
+new file mode 100644
+index 0000000..3c4ee87
+--- /dev/null
++++ b/.agents/notes/implemented/feature/2026-11-13-community-windows-github-updates.i18n.yaml
+@@ -0,0 +1,19 @@
++# Bilingual-pair consistency record for 2026-11-13-community-windows-github-updates.md (docs/i18n/README.md): per heading
++# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
++# After editing either side, bring the other along and re-record with:
++#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-11-13-community-windows-github-updates.md
++/agent-note-community-windows-updates-through-github-releases:
++  en: 33503d4186fa0a91
++  zh: 4194acd8422f5aa8
++/agent-note-community-windows-updates-through-github-releases/problem:
++  en: 2e5e477d2cd90122
++  zh: 8b67b20cedbbd126
++/agent-note-community-windows-updates-through-github-releases/decision:
++  en: 5b86cee6dd06f404
++  zh: fe0dc00412004ddf
++/agent-note-community-windows-updates-through-github-releases/alternatives-considered:
++  en: c4252edf89e85053
++  zh: c128cb50756de152
++/agent-note-community-windows-updates-through-github-releases/consequences:
++  en: bcfaaf88007d56ad
++  zh: fd9dc6765171c3b2
+diff --git a/.agents/notes/implemented/feature/2026-11-13-community-windows-github-updates.md b/.agents/notes/implemented/feature/2026-11-13-community-windows-github-updates.md
+new file mode 100644
+index 0000000..236c260
+--- /dev/null
++++ b/.agents/notes/implemented/feature/2026-11-13-community-windows-github-updates.md
+@@ -0,0 +1,31 @@
++# Agent Note: Community Windows updates through GitHub Releases
++
++Status: implemented
++
++English | [中文](2026-11-13-community-windows-github-updates.zh.md)
++
++This downstream decision is an explicit exception to the official [signed Desktop release policy](../architecture/2026-08-25-electron-desktop-packaging-and-updates.md).
++
++## Problem
++
++The community Windows package has no DeepSeek signing certificate or access to the official COS release service. Omitting updater metadata forces every user to discover, download, and install each community preview manually, but treating an unsigned package as an official release would discard the publisher guarantee that the standard Desktop release requires.
++
++## Decision
++
++An unsigned Windows x64 package can opt into a downstream generic-provider URL through `DSH_DESKTOP_COMMUNITY_UPDATE_URL` in `.env.windows`. The setting is rejected for signed packages, other platforms, other architectures, inherited process configuration, non-HTTPS URLs, credentials, queries, and fragments. Ordinary unsigned packages continue to omit updater metadata.
++
++The community package uses the `nightly` channel and omits the mandatory DeepSeek update-policy service. GitHub Actions uploads the versioned NSIS installer before replacing the fixed feed metadata. The application checks in the background, but `electron-updater` does not download or install until the user confirms each operation.
++
++The feed's SHA-512 value detects a corrupt or mismatched installer. It does not authenticate the publisher because the installer and feed share the same GitHub repository trust. Windows therefore continues to identify the package as an unknown publisher until the community release process gains a code-signing certificate.
++
++## Alternatives considered
++
++**Reuse the official COS configuration.** The community repository has neither the official bucket credentials nor authority to publish under the DeepSeek download origin.
++
++**Enable updater metadata for every unsigned package.** Local diagnostic packages must remain inert and cannot inherit a release destination accidentally. A file-owned opt-in keeps the exception narrow.
++
++**Mark the community package as signed without a certificate.** Disabling or imitating publisher verification would present an assurance the package does not provide. The package remains visibly unsigned and documents the limitation.
++
++## Consequences
++
++Users manually install one bootstrap community version and can then receive later community previews through the in-app confirmation flow. A compromised repository or release account can replace both metadata and installer, so SHA-512 is not a substitute for Authenticode. Official signed builds, upload qualification, COS feeds, and release records remain unchanged.
+diff --git a/.agents/notes/implemented/feature/2026-11-13-community-windows-github-updates.zh.md b/.agents/notes/implemented/feature/2026-11-13-community-windows-github-updates.zh.md
+new file mode 100644
+index 0000000..f0d7844
+--- /dev/null
++++ b/.agents/notes/implemented/feature/2026-11-13-community-windows-github-updates.zh.md
+@@ -0,0 +1,31 @@
++# Agent Note: 通过 GitHub Releases 更新 Windows 社区版
++
++Status: implemented
++
++[English](2026-11-13-community-windows-github-updates.md) | 中文
++
++这个下游决策是官方[已签名 Desktop 发布策略](../architecture/2026-08-25-electron-desktop-packaging-and-updates.zh.md)的一个显式例外。
++
++## Problem
++
++Windows 社区版没有 DeepSeek 签名证书，也不能访问官方 COS 发布服务。省略更新器元数据会迫使每位用户手动发现、下载并安装每个社区预览版，但把未签名安装包当作官方发布会丢弃标准 Desktop 发布所要求的发布者保证。
++
++## Decision
++
++未签名的 Windows x64 安装包可以通过 `.env.windows` 中的 `DSH_DESKTOP_COMMUNITY_UPDATE_URL` 选择一个下游 generic-provider URL。已签名安装包、其他平台、其他架构、继承的进程配置、非 HTTPS URL、凭据、查询和片段都会被拒绝。普通未签名安装包仍然省略更新器元数据。
++
++社区版安装包使用 `nightly` 频道，并省略 DeepSeek 强制更新策略服务。GitHub Actions 先上传带版本的 NSIS 安装包，最后替换固定入口中的更新元数据。应用会在后台检查更新，但只有用户分别确认后，`electron-updater` 才会下载和安装。
++
++清单中的 SHA-512 可以发现损坏或不匹配的安装包。它不能验证发布者身份，因为安装包与清单共同依赖同一个 GitHub 仓库。社区发布流程获得代码签名证书之前，Windows 会继续把安装包标识为未知发布者。
++
++## Alternatives considered
++
++**复用官方 COS 配置。** 社区仓库既没有官方 bucket 凭据，也无权在 DeepSeek 下载源下发布文件。
++
++**为每个未签名安装包启用更新器元数据。** 本地诊断包必须保持惰性，也不能意外继承发布目标。由文件持有的显式开关把例外限制在最小范围内。
++
++**在没有证书时把社区安装包标记为已签名。** 禁用或仿冒发布者验证会暗示安装包具备实际不存在的保证。安装包继续明确保持未签名状态，并记录这一限制。
++
++## Consequences
++
++用户需要手动安装一次引导版社区安装包，随后可以通过应用内确认流程接收之后的社区预览版。如果仓库或发布账号被攻破，攻击者可以同时替换元数据和安装包，因此 SHA-512 不能替代 Authenticode。官方签名构建、上传资格校验、COS 更新源和发布记录保持不变。
+diff --git a/apps/desktop/scripts/desktop-community-update-environment.d.mts b/apps/desktop/scripts/desktop-community-update-environment.d.mts
+new file mode 100644
+index 0000000..cb67f44
+--- /dev/null
++++ b/apps/desktop/scripts/desktop-community-update-environment.d.mts
+@@ -0,0 +1,23 @@
++/** Environment variable that opts an unsigned Windows x64 package into the community feed. */
++export const DESKTOP_COMMUNITY_UPDATE_URL: 'DSH_DESKTOP_COMMUNITY_UPDATE_URL'
++
++/** Validated downstream updater settings for one unsigned Windows package. */
++export interface DesktopCommunityUpdateConfig {
++  readonly channel: 'nightly'
++  readonly publicUrl: string
++}
++
++/**
++ * Resolve the community updater only for an explicitly unsigned Windows x64 package.
++ * @param environment File-owned packaging settings.
++ * @param platform Target platform.
++ * @param arch Target architecture.
++ * @param unsigned Whether the package omits a publisher signature.
++ * @returns Validated generic-provider settings, or undefined when the file omits the opt-in.
++ */
++export function resolveDesktopCommunityUpdateConfig(
++  environment: NodeJS.ProcessEnv,
++  platform: NodeJS.Platform,
++  arch: string,
++  unsigned: boolean,
++): DesktopCommunityUpdateConfig | undefined
+diff --git a/apps/desktop/scripts/desktop-community-update-environment.mjs b/apps/desktop/scripts/desktop-community-update-environment.mjs
+new file mode 100644
+index 0000000..a14ba52
+--- /dev/null
++++ b/apps/desktop/scripts/desktop-community-update-environment.mjs
+@@ -0,0 +1,28 @@
++/** Validate the downstream community update source without changing official release routing. */
++
++/** Environment variable that opts an unsigned Windows x64 package into the community feed. */
++export const DESKTOP_COMMUNITY_UPDATE_URL = 'DSH_DESKTOP_COMMUNITY_UPDATE_URL'
++
++/**
++ * Resolve the community updater only for an explicitly unsigned Windows x64 package.
++ * @param {NodeJS.ProcessEnv} environment File-owned packaging settings.
++ * @param {NodeJS.Platform} platform Target platform.
++ * @param {string} arch Target architecture.
++ * @param {boolean} unsigned Whether the package omits a publisher signature.
++ * @returns {{ channel: 'nightly', publicUrl: string } | undefined} Validated generic-provider settings.
++ */
++export function resolveDesktopCommunityUpdateConfig(environment, platform, arch, unsigned) {
++  const value = environment[DESKTOP_COMMUNITY_UPDATE_URL]?.trim()
++  if (!value) return undefined
++  if (!unsigned || platform !== 'win32' || arch !== 'x64') {
++    throw new Error(`desktop community update: ${DESKTOP_COMMUNITY_UPDATE_URL} requires unsigned Windows x64 packaging`)
++  }
++  let url
++  try { url = new URL(value) }
++  catch { throw new Error(`desktop community update: ${DESKTOP_COMMUNITY_UPDATE_URL} must be an absolute HTTPS URL`) }
++  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) {
++    throw new Error(`desktop community update: ${DESKTOP_COMMUNITY_UPDATE_URL} must be HTTPS without credentials, query, or fragment`)
++  }
++  url.pathname = `${url.pathname.replace(/\/+$/u, '')}/`
++  return { channel: 'nightly', publicUrl: url.toString() }
++}
+diff --git a/apps/desktop/scripts/desktop-package-environment.mjs b/apps/desktop/scripts/desktop-package-environment.mjs
+index 83e9dbb..7c54beb 100644
+--- a/apps/desktop/scripts/desktop-package-environment.mjs
++++ b/apps/desktop/scripts/desktop-package-environment.mjs
+@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
+ import { readDesktopPackageSettings as readSettings } from './desktop-file-settings.mjs'
+ import { resolveDesktopAppId, resolveMacOSNotarizationEnvironment, resolveMacOSSigningEnvironment, resolveNpmRegistry } from './desktop-release-environment.mjs'
+ import { resolveDesktopAutoUpdateConfig } from './desktop-auto-update-environment.mjs'
++import { resolveDesktopCommunityUpdateConfig } from './desktop-community-update-environment.mjs'
+ import { createWindowsTokenSigner } from './windows-sign.mjs'
+ import { resolveDesktopPolicyEnvironment } from './desktop-policy-environment.mjs'
+ import { validateMacOSSignatureCacheDirectory } from './macos-signature-cache-directory.mjs'
+@@ -15,10 +16,10 @@ import { resolveWindowsPackageSettings } from './windows-package-settings.mjs'
+ import { resolveDesktopTargetBuildPaths } from './desktop-build-paths.mjs'
+ 
+ const APP_ROOT = fileURLToPath(new URL('..', import.meta.url))
+-const SHARED_SETTING = /^(?:DSH_DESKTOP_(?:APP_ID|AUTO_UPDATE_ENV|NPM_REGISTRY|MANDATORY_UPDATE_(?:CONFIG|(?:TEST|PROD)_ORIGIN))|DOWNLOAD_TEST_RELEASE_ID|DOWNLOAD_PROD_EO_ZONE_ID|DOWNLOAD_(?:TEST|PROD)_(?:ORIGIN|COS_BUCKET|COS_SECRET_ID|COS_SECRET_KEY))$/u
++const SHARED_SETTING = /^(?:DSH_DESKTOP_(?:APP_ID|AUTO_UPDATE_ENV|COMMUNITY_UPDATE_URL|NPM_REGISTRY|MANDATORY_UPDATE_(?:CONFIG|(?:TEST|PROD)_ORIGIN))|DOWNLOAD_TEST_RELEASE_ID|DOWNLOAD_PROD_EO_ZONE_ID|DOWNLOAD_(?:TEST|PROD)_(?:ORIGIN|COS_BUCKET|COS_SECRET_ID|COS_SECRET_KEY))$/u
+ const WINDOWS_SETTING = /^DSH_DESKTOP_WINDOWS_(?:CER_FILE|SIGNTOOL|KEY_CONTAINER|TOKEN_PIN|SIGNATURE_CACHE_DIR|SIGNATURE_CACHE_CONCURRENCY|PACK_CONCURRENCY|COMPRESSION_LEVEL)$/u
+ const MACOS_SETTING = /^(?:DSH_DESKTOP_MACOS_(?:SIGNING_IDENTITY|TEAM_ID|SIGNATURE_CACHE_DIR|PACK_CONCURRENCY|ZIP_COMPRESSION_LEVEL|DOWNLOAD_PROXY|NOTARIZATION_PROXY)|APPLE_(?:API_KEY|API_KEY_ID|API_ISSUER|ID|APP_SPECIFIC_PASSWORD|TEAM_ID|KEYCHAIN|KEYCHAIN_PROFILE)|CSC_(?:LINK|KEY_PASSWORD))$/u
+-const AMBIENT_RELEASE_SETTING = /^(?:DSH_DESKTOP_(?:APP_ID|AUTO_UPDATE_ENV|MANDATORY_UPDATE_.*|WINDOWS_.*|MACOS_.*)|APPLE_.*|(?:WIN_)?CSC_.*|DOWNLOAD_(?:TEST|PROD)_.*)$/iu
++const AMBIENT_RELEASE_SETTING = /^(?:DSH_DESKTOP_(?:APP_ID|AUTO_UPDATE_ENV|COMMUNITY_UPDATE_URL|MANDATORY_UPDATE_.*|WINDOWS_.*|MACOS_.*)|APPLE_.*|(?:WIN_)?CSC_.*|DOWNLOAD_(?:TEST|PROD)_.*)$/iu
+ 
+ /**
+  * Select local macOS test defaults without reading dotenv files or inheriting release settings.
+@@ -121,7 +122,8 @@ export function validateDesktopPackageEnvironment(environment, target, options =
+   resolveDesktopTargetBuildPaths(environment, target.platform, target.arch)
+   resolveDesktopAppId(environment)
+   resolveNpmRegistry(environment)
+-  if (target.platform !== 'darwin' || !options.unsigned) resolveDesktopPolicyEnvironment(environment)
++  const communityUpdate = resolveDesktopCommunityUpdateConfig(environment, target.platform, target.arch, options.unsigned === true)
++  if ((target.platform !== 'darwin' || !options.unsigned) && communityUpdate === undefined) resolveDesktopPolicyEnvironment(environment)
+   if (target.platform === 'darwin') resolveMacOSPackageSettings(environment)
+   else resolveWindowsPackageSettings(environment)
+   if (options.unsigned) return
+diff --git a/apps/desktop/scripts/electron-builder-config.mjs b/apps/desktop/scripts/electron-builder-config.mjs
+index d5522e3..9dc5111 100644
+--- a/apps/desktop/scripts/electron-builder-config.mjs
++++ b/apps/desktop/scripts/electron-builder-config.mjs
+@@ -21,6 +21,7 @@ import {
+   scrubWindowsSigningEnvironment,
+ } from './windows-sign.mjs'
+ import { resolveDesktopAutoUpdateConfig } from './desktop-auto-update-environment.mjs'
++import { resolveDesktopCommunityUpdateConfig } from './desktop-community-update-environment.mjs'
+ import { resolveDesktopBuildCommit } from './desktop-build-commit.mjs'
+ import { resolveDesktopBuildVersion } from './desktop-build-version.mjs'
+ import { resolveDesktopPolicyEnvironment } from './desktop-policy-environment.mjs'
+@@ -66,7 +67,8 @@ export function createElectronBuilderConfig(
+   if (skipNotarization && (unsigned || resolvedPlatform !== 'darwin')) throw new Error('Skipping notarization requires a signed macOS build')
+   const packagesMacOS = targetPlatform === 'darwin' || (targetPlatform === undefined && hostPlatform === 'darwin')
+   const packagesWindows = resolvedPlatform === 'win32'
+-  const policy = packagesMacOS && unsigned ? undefined : resolveDesktopPolicyEnvironment(env)
++  const communityUpdate = resolveDesktopCommunityUpdateConfig(env, resolvedPlatform, resolvedArch, unsigned)
++  const policy = (packagesMacOS && unsigned) || communityUpdate !== undefined ? undefined : resolveDesktopPolicyEnvironment(env)
+   if (resolvedPlatform === 'win32') installWindowsDirectoryInstaller()
+   const macOSSigning = packagesMacOS && !unsigned ? resolveMacOSSigningEnvironment(env) : undefined
+   if (packagesMacOS && !unsigned && !skipNotarization) resolveMacOSNotarizationEnvironment(env)
+@@ -99,7 +101,7 @@ export function createElectronBuilderConfig(
+   if (windowsSigner !== undefined) {
+     installWindowsNsisBootstrapSigner({ sign: windowsSigner })
+   }
+-  const update = unsigned ? undefined : resolveDesktopAutoUpdateConfig(env, resolvedPlatform, resolvedArch)
++  const update = communityUpdate ?? (unsigned ? undefined : resolveDesktopAutoUpdateConfig(env, resolvedPlatform, resolvedArch))
+   if (preparedRuntime !== undefined) buildPaths.dsh = preparedRuntime
+   // electron-builder merges extraMetadata into the packaged manifest, so a build version here reaches
+   // the artifact names, the update feed, and the installed app.getVersion() the updater compares against.
+diff --git a/apps/desktop/tests/community-update-environment.spec.ts b/apps/desktop/tests/community-update-environment.spec.ts
+new file mode 100644
+index 0000000..59cd7a6
+--- /dev/null
++++ b/apps/desktop/tests/community-update-environment.spec.ts
+@@ -0,0 +1,35 @@
++import { describe, expect, it } from 'vitest'
++import { resolveDesktopCommunityUpdateConfig } from '../scripts/desktop-community-update-environment.mjs'
++
++const URL = 'https://github.com/example/community/releases/download/windows-update'
++
++describe('community Windows update environment', () => {
++  it('keeps ordinary packages on the official release path', () => {
++    expect(resolveDesktopCommunityUpdateConfig({}, 'win32', 'x64', true)).toBeUndefined()
++  })
++
++  it('normalizes one explicit unsigned Windows x64 feed', () => {
++    expect(resolveDesktopCommunityUpdateConfig({ DSH_DESKTOP_COMMUNITY_UPDATE_URL: URL }, 'win32', 'x64', true))
++      .toEqual({ channel: 'nightly', publicUrl: `${URL}/` })
++  })
++
++  it.each([
++    ['signed package', 'win32', 'x64', false],
++    ['macOS package', 'darwin', 'x64', true],
++    ['Windows arm64 package', 'win32', 'arm64', true],
++  ] as const)('rejects the community feed for a %s', (_name, platform, arch, unsigned) => {
++    expect(() => resolveDesktopCommunityUpdateConfig({ DSH_DESKTOP_COMMUNITY_UPDATE_URL: URL }, platform, arch, unsigned))
++      .toThrow('requires unsigned Windows x64 packaging')
++  })
++
++  it.each([
++    'http://updates.example.com/feed',
++    'https://user:secret@updates.example.com/feed',
++    'https://updates.example.com/feed?channel=nightly',
++    'https://updates.example.com/feed#nightly',
++    'not-a-url',
++  ])('rejects unsafe feed URL %s', (url) => {
++    expect(() => resolveDesktopCommunityUpdateConfig({ DSH_DESKTOP_COMMUNITY_UPDATE_URL: url }, 'win32', 'x64', true))
++      .toThrow(/DSH_DESKTOP_COMMUNITY_UPDATE_URL/u)
++  })
++})
+diff --git a/apps/desktop/tests/desktop-package-environment.spec.ts b/apps/desktop/tests/desktop-package-environment.spec.ts
+index a8d79a2..4c984ec 100644
+--- a/apps/desktop/tests/desktop-package-environment.spec.ts
++++ b/apps/desktop/tests/desktop-package-environment.spec.ts
+@@ -235,6 +235,16 @@ describe('Desktop local packaging configuration', () => {
+     })
+   })
+ 
++  it('loads the community update URL only from the Windows release file', async () => {
++    await withDirectory(async (directory) => {
++      const url = 'https://github.com/example/community/releases/download/windows-update'
++      await writeFile(join(directory, '.env.windows'), `DSH_DESKTOP_APP_ID=com.example.community\nDSH_DESKTOP_COMMUNITY_UPDATE_URL=${url}\n`)
++      const selected = loadDesktopPackageEnvironment('win32', { DSH_DESKTOP_COMMUNITY_UPDATE_URL: 'https://stale.example.com' }, directory, { unsigned: true })
++      expect(selected.DSH_DESKTOP_COMMUNITY_UPDATE_URL).toBe(url)
++      expect(() => validateDesktopPackageEnvironment(selected, WINDOWS, { unsigned: true })).not.toThrow()
++    })
++  })
++
+   it('checks application and update configuration before Windows credentials while preserving unsigned and preparation modes', () => {
+     expect(() => {
+       validateDesktopPackageEnvironment({}, WINDOWS, { unsigned: true })
+diff --git a/apps/desktop/tests/installer-packaging.spec.ts b/apps/desktop/tests/installer-packaging.spec.ts
+index 1e438de..9b39976 100644
+--- a/apps/desktop/tests/installer-packaging.spec.ts
++++ b/apps/desktop/tests/installer-packaging.spec.ts
+@@ -102,6 +102,21 @@ describe('installer preparation preserves application dependencies', () => {
+     expect(config.artifactName).toBe('deepseek-harness-${version}-${os}-${arch}-unsigned.${ext}')
+   })
+ 
++  it('embeds an explicit community feed without official policy metadata', async () => {
++    const { createElectronBuilderConfig } = await import('../scripts/electron-builder-config.mjs')
++    const config = createElectronBuilderConfig({
++      DSH_DESKTOP_APP_ID: 'com.example.community',
++      DSH_DESKTOP_COMMUNITY_UPDATE_URL: 'https://github.com/example/community/releases/download/windows-update',
++      DSH_DESKTOP_TARGET_PLATFORM: 'win32',
++      DSH_DESKTOP_TARGET_ARCH: 'x64',
++      DSH_DESKTOP_UNSIGNED: '1',
++    }, 'win32', 'x64')
++    expect(config.publish).toEqual([{ provider: 'generic',
++      url: 'https://github.com/example/community/releases/download/windows-update/', channel: 'nightly' }])
++    expect(config.extraMetadata).not.toHaveProperty('dshMandatoryUpdatePolicy')
++    expect(config.extraMetadata.dshDesktopUpdateChannel).toBe('nightly')
++  })
++
+   it('packages every preload entry point the shell loads', async () => {
+     const { readdirSync, readFileSync } = await import('node:fs')
+     const sourceDirectory = new URL('../src/', import.meta.url)
