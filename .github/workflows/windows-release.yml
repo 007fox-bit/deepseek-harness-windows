@@ -1,0 +1,181 @@
+name: Build Windows x64 auto-update package
+
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_tag:
+        description: Official DeepSeek Harness tag to build
+        required: true
+        default: dsh-v0.2.2-rc.2
+        type: string
+      publish:
+        description: Publish the versioned prerelease and update feed
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-x64-${{ inputs.upstream_tag }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Windows x64 NSIS with GitHub updates
+    runs-on: windows-2025
+    timeout-minutes: 180
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Check out community packaging
+        uses: actions/checkout@v7.0.1
+        with:
+          path: community
+
+      - name: Check out official source
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: ${{ inputs.upstream_tag }}
+          fetch-depth: 1
+          path: upstream
+
+      - name: Apply and verify Windows update patch
+        working-directory: upstream
+        run: |
+          git apply --check ../community/patches/windows-github-update-rc2.patch
+          git apply ../community/patches/windows-github-update-rc2.patch
+          git diff --check
+          "UPSTREAM_COMMIT=$(git rev-parse HEAD)" >> $env:GITHUB_ENV
+          "VERSION=$((Get-Content -Raw package.json | ConvertFrom-Json).version)" >> $env:GITHUB_ENV
+
+      - name: Enable pnpm
+        uses: pnpm/action-setup@v5.0.0
+        with:
+          package_json_file: upstream/package.json
+          dest: ${{ runner.temp }}/setup-pnpm-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24.19.0
+
+      - name: Install locked dependencies
+        working-directory: upstream
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Windows update packaging tests
+        working-directory: upstream
+        run: >-
+          pnpm exec vitest run
+          apps/desktop/tests/community-update-environment.spec.ts
+          apps/desktop/tests/desktop-package-environment.spec.ts
+          apps/desktop/tests/installer-packaging.spec.ts
+
+      - name: Configure community update source
+        working-directory: upstream
+        env:
+          COMMUNITY_UPDATE_URL: https://github.com/${{ github.repository }}/releases/download/windows-update
+        run: |
+          @"
+          DSH_DESKTOP_APP_ID=com.deepseek.harness.community
+          DSH_DESKTOP_COMMUNITY_UPDATE_URL=$env:COMMUNITY_UPDATE_URL
+          DSH_DESKTOP_WINDOWS_COMPRESSION_LEVEL=3
+          "@ | Set-Content -LiteralPath apps/desktop/.env.windows -Encoding utf8NoBOM
+
+      - name: Build and verify unsigned NSIS installer
+        working-directory: upstream
+        env:
+          CI: "true"
+          DSH_DESKTOP_UPDATE_CHANNEL: nightly
+        run: pnpm run package:desktop:win:x64:unsigned
+
+      - name: Collect and verify release assets
+        working-directory: upstream
+        env:
+          COMMUNITY_UPDATE_URL: https://github.com/${{ github.repository }}/releases/download/windows-update
+          UPSTREAM_TAG: ${{ inputs.upstream_tag }}
+        run: |
+          $source = 'apps/desktop/.desktop-build/targets/win-x64/unsigned-artifacts'
+          $installers = @(Get-ChildItem -LiteralPath $source -File -Filter '*.exe')
+          if ($installers.Count -ne 1) { throw "Expected one NSIS installer, found $($installers.Count)" }
+          $installer = $installers[0]
+          $blockmap = Get-Item -LiteralPath "$($installer.FullName).blockmap" -ErrorAction Stop
+          $metadata = Get-Item -LiteralPath (Join-Path $source 'nightly.yml') -ErrorAction Stop
+          $updateConfigs = @(Get-ChildItem -LiteralPath 'apps/desktop/.desktop-build' -File -Filter 'app-update.yml' -Recurse)
+          if ($updateConfigs.Count -lt 1) { throw 'Packaged app-update.yml was not found' }
+          if (-not ($updateConfigs | Where-Object { (Get-Content -Raw $_.FullName) -match [regex]::Escape($env:COMMUNITY_UPDATE_URL) })) {
+            throw 'Packaged update source does not point at the community feed'
+          }
+          if ((Get-AuthenticodeSignature -LiteralPath $installer.FullName).Status -ne 'NotSigned') {
+            throw 'Community installer must remain explicitly unsigned until a release certificate is configured'
+          }
+
+          $dist = Join-Path (Resolve-Path '../community').Path 'dist-windows'
+          New-Item -ItemType Directory -Force -Path $dist | Out-Null
+          Copy-Item -LiteralPath $installer.FullName -Destination $dist
+          Copy-Item -LiteralPath $blockmap.FullName -Destination $dist
+          Copy-Item -LiteralPath $metadata.FullName -Destination $dist
+          $releaseTag = "$env:UPSTREAM_TAG-community-windows"
+          node ../community/scripts/rewrite-windows-feed.mjs (Join-Path $dist 'nightly.yml') $env:GITHUB_REPOSITORY $releaseTag $installer.Name
+          $hash = Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $dist $installer.Name)
+          "$($hash.Hash.ToLowerInvariant())  $($installer.Name)" | Set-Content -LiteralPath (Join-Path $dist 'SHA256SUMS-windows.txt') -Encoding ascii
+          @(
+            "Upstream tag: $env:UPSTREAM_TAG"
+            "Upstream commit: $env:UPSTREAM_COMMIT"
+            "Community workflow run: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            "Update feed: $env:COMMUNITY_UPDATE_URL/nightly.yml"
+            'Code signing: none (community preview)'
+          ) | Set-Content -LiteralPath (Join-Path $dist 'BUILD_INFO-windows.txt') -Encoding utf8NoBOM
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: deepseek-harness-${{ inputs.upstream_tag }}-windows-x64-auto-update
+          path: community/dist-windows/*
+          archive: false
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish versioned prerelease
+        if: ${{ inputs.publish }}
+        working-directory: community
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPSTREAM_TAG: ${{ inputs.upstream_tag }}
+        run: |
+          $version = $env:UPSTREAM_TAG -replace '^dsh-v', ''
+          $releaseTag = "$env:UPSTREAM_TAG-community-windows"
+          if (-not (gh release view $releaseTag 2>$null)) {
+            gh release create $releaseTag `
+              --target $env:GITHUB_SHA `
+              --title "DeepSeek Harness $version Community Windows x64" `
+              --prerelease `
+              --notes "Unofficial unsigned Windows x64 community build from official $env:UPSTREAM_TAG. This bootstrap release checks the community nightly feed and requires confirmation before download and installation. Windows displays Unknown publisher because no code-signing certificate is configured. Verify SHA256SUMS-windows.txt before the first manual installation."
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          gh release upload $releaseTag dist-windows/* --clobber
+          exit $LASTEXITCODE
+
+      - name: Publish fixed update feed last
+        if: ${{ inputs.publish }}
+        working-directory: community
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $feedTag = 'windows-update'
+          if (-not (gh release view $feedTag 2>$null)) {
+            gh release create $feedTag `
+              --target $env:GITHUB_SHA `
+              --title 'DeepSeek Harness Community Windows update feed' `
+              --prerelease `
+              --notes 'Machine-readable Windows nightly update metadata. Installers remain in versioned community prereleases.'
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          gh release upload $feedTag dist-windows/nightly.yml --clobber
+          exit $LASTEXITCODE
