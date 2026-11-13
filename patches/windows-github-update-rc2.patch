@@ -289,7 +289,7 @@ index a8d79a2..4c984ec 100644
      expect(() => {
        validateDesktopPackageEnvironment({}, WINDOWS, { unsigned: true })
 diff --git a/apps/desktop/tests/installer-packaging.spec.ts b/apps/desktop/tests/installer-packaging.spec.ts
-index 1e438de..9b39976 100644
+index 1e438de..27c63b1 100644
 --- a/apps/desktop/tests/installer-packaging.spec.ts
 +++ b/apps/desktop/tests/installer-packaging.spec.ts
 @@ -102,6 +102,21 @@ describe('installer preparation preserves application dependencies', () => {
@@ -308,7 +308,7 @@ index 1e438de..9b39976 100644
 +    expect(config.publish).toEqual([{ provider: 'generic',
 +      url: 'https://github.com/example/community/releases/download/windows-update/', channel: 'nightly' }])
 +    expect(config.extraMetadata).not.toHaveProperty('dshMandatoryUpdatePolicy')
-+    expect(config.extraMetadata.dshDesktopUpdateChannel).toBe('nightly')
++    expect(config.extraMetadata).toHaveProperty('dshDesktopUpdateChannel', 'nightly')
 +  })
 +
    it('packages every preload entry point the shell loads', async () => {
