@@ -138,7 +138,6 @@ jobs:
         with:
           name: deepseek-harness-${{ inputs.upstream_tag }}-windows-x64-auto-update
           path: community/dist-windows/*
-          archive: false
           if-no-files-found: error
           retention-days: 30
 
